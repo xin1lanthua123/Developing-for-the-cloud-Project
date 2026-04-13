@@ -227,55 +227,55 @@ jobs:
 
       - name: Wait for ALB Ingress to be Ready (Production Grade)
         run: |
-          set -e
+            set -e
 
-          INGRESS_NAME="incident-backend-ingress"
-          NAMESPACE="incident-system"
+            INGRESS_NAME="incident-backend-ingress"
+            NAMESPACE="incident-system"
 
-          echo "Waiting for ALB ingress: $INGRESS_NAME"
+            echo "Waiting for ALB ingress: $INGRESS_NAME"
 
-          for i in $(seq 1 40); do
+            for i in $(seq 1 40); do
 
-            # lấy full status trước
-            STATUS=$(kubectl get ingress $INGRESS_NAME -n $NAMESPACE -o json)
+              # lấy full status trước
+              STATUS=$(kubectl get ingress $INGRESS_NAME -n $NAMESPACE -o json)
 
-            HOSTNAME=$(echo "$STATUS" | jq -r '.status.loadBalancer.ingress[0].hostname // empty')
-            IP=$(echo "$STATUS" | jq -r '.status.loadBalancer.ingress[0].ip // empty')
+              HOSTNAME=$(echo "$STATUS" | jq -r '.status.loadBalancer.ingress[0].hostname // empty')
+              IP=$(echo "$STATUS" | jq -r '.status.loadBalancer.ingress[0].ip // empty')
 
-            if [ -n "$HOSTNAME" ]; then
-              echo "ALB ready (hostname): $HOSTNAME"
-              echo "ALB_DNS_NAME=$HOSTNAME" >> $GITHUB_ENV
-              exit 0
-            fi
+              if [ -n "$HOSTNAME" ]; then
+                echo "ALB ready (hostname): $HOSTNAME"
+                echo "ALB_DNS_NAME=$HOSTNAME" >> $GITHUB_ENV
+                exit 0
+              fi
 
-            if [ -n "$IP" ]; then
-              echo "ALB ready (ip): $IP"
-              echo "ALB_DNS_NAME=$IP" >> $GITHUB_ENV
-              exit 0
-            fi
+              if [ -n "$IP" ]; then
+                echo "ALB ready (ip): $IP"
+                echo "ALB_DNS_NAME=$IP" >> $GITHUB_ENV
+                exit 0
+              fi
 
-            echo "[$i/40] ALB not ready yet... waiting"
-            sleep 15
-          done
+              echo "[$i/40] ALB not ready yet... waiting"
+              sleep 15
+            done
 
-          echo " ALB not ready after timeout"
-          exit 1
+            echo " ALB not ready after timeout"
+            exit 1
 
-            - name: Render Deployment from Template
-              run: |
-                export AWS_REGION="${{ vars.AWS_REGION }}"
-                export IMAGE_TAG="${IMAGE_TAG:0:7}"
-                export ECR_REPO_URI="$repo_url"
+      - name: Render Deployment from Template
+        run: |
+            export AWS_REGION="${{ vars.AWS_REGION }}"
+            export IMAGE_TAG="${IMAGE_TAG:0:7}"
+            export ECR_REPO_URI="$repo_url"
 
-                envsubst < k8s/deployment.yaml.tpl > k8s/deployment.yaml
+            envsubst < k8s/deployment.yaml.tpl > k8s/deployment.yaml
 
-                echo "========= Rendered Deployment ========="
-                cat k8s/deployment.yaml
+            echo "========= Rendered Deployment ========="
+            cat k8s/deployment.yaml
 
-            - name: Apply Deployment
-              run: |
-                kubectl apply -f k8s/deployment.yaml
-                kubectl rollout status deployment incident-api -n incident-system --timeout=300s
+      - name: Apply Deployment
+        run: |
+            kubectl apply -f k8s/deployment.yaml
+            kubectl rollout status deployment incident-api -n incident-system --timeout=300s
 
       # =========================
       # BUILD + DEPLOY FRONTEND
@@ -285,7 +285,7 @@ jobs:
         run: |
           rm -f .env
           cat > .env <<EOF 
-          VITE_API_URL=$FRONTEND_URL
+          VITE_API_URL=http://${ALB_DNS_NAME}
           VITE_COGNITO_USER_POOL_ID=$COGNITO_USER_POOL_ID
           VITE_COGNITO_CLIENT_ID=$COGNITO_CLIENT_ID
           VITE_AWS_REGION=${{ vars.AWS_REGION }}
