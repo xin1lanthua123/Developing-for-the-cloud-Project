@@ -2,7 +2,15 @@ name: Full Production Deploy (Terraform + EKS + Frontend)
 
 on:
   workflow_dispatch:
-    
+     inputs:
+      action:
+        description: "Terraform action"
+        required: true
+        default: "apply"
+        type: choice
+        options:
+          - apply
+          - destroy
 
 env:
   IMAGE_TAG: ${{ github.sha }}
@@ -48,6 +56,17 @@ jobs:
 
           TF_VAR_jira_base_url: https://ldlq2005.atlassian.net
           TF_VAR_jira_email: ${{ secrets.JIRA_EMAIL}}
+          TF_VAR_jira_token: ${{ secrets.JIRA_API_TOKEN }}
+          TF_VAR_jira_project_key: QN
+      - name: Terraform Destroy
+        working-directory: infra
+        if: github.event.inputs.action == 'destroy'
+        run: terraform destroy -input=false -auto-approve
+        env:
+          TF_VAR_project_name: cloud-incident-system
+          TF_VAR_aws_region: ${{ vars.AWS_REGION }}
+          TF_VAR_jira_base_url: https://ldlq2005.atlassian.net
+          TF_VAR_jira_email: ${{ secrets.JIRA_EMAIL }}
           TF_VAR_jira_token: ${{ secrets.JIRA_API_TOKEN }}
           TF_VAR_jira_project_key: QN
 
