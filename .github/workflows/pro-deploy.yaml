@@ -284,11 +284,21 @@ jobs:
         working-directory: infra
         run: terraform apply -auto-approve -target=module.frontend_hosting -target=module.s3_upload 
         env:
-          TF_VAR_project_name: cloud-incident-system
-          TF_VAR_frontend_bucket_prefix: cloud-incident-frontend
-          TF_VAR_backend_dns_name: http://${ALB_DNS_NAME}
-           
+          TF_VAR_aws_region: ${{ vars.AWS_REGION }}
+
+          TF_VAR_dynamodb_table_name: cloud-incident-table
+
           TF_VAR_upload_bucket_prefix: cloud-incident-upload
+          TF_VAR_frontend_bucket_prefix: cloud-incident-frontend
+
+          TF_VAR_jira_base_url: https://ldlq2005.atlassian.net
+          TF_VAR_jira_email: ${{ secrets.JIRA_EMAIL}}
+          TF_VAR_jira_token: ${{ secrets.JIRA_API_TOKEN }}
+          TF_VAR_jira_project_key: QN
+          TF_VAR_project_name: cloud-incident-system
+        
+          TF_VAR_backend_dns_name: http://${ALB_DNS_NAME}
+       
 
 
 
