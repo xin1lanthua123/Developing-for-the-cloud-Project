@@ -225,43 +225,57 @@ jobs:
         run: |
             kubectl apply -f k8s/ingress.yaml
 
-      - name: Wait for ALB
+      - name: Wait for ALB Ingress to be Ready (Production Grade)
         run: |
-          for i in {1..60}; do
+          set -e
 
-            ALB_DNS=$(kubectl get ingress incident-backend-ingress \
-              -n incident-system \
-              -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null)
+          INGRESS_NAME="incident-backend-ingress"
+          NAMESPACE="incident-system"
 
-            if [[ "$ALB_DNS" != "" ]]; then
-              echo "ALB_DNS_NAME=$ALB_DNS" >> $GITHUB_ENV
-              echo "READY: $ALB_DNS"
+          echo "Waiting for ALB ingress: $INGRESS_NAME"
+
+          for i in $(seq 1 40); do
+
+            # lấy full status trước
+            STATUS=$(kubectl get ingress $INGRESS_NAME -n $NAMESPACE -o json)
+
+            HOSTNAME=$(echo "$STATUS" | jq -r '.status.loadBalancer.ingress[0].hostname // empty')
+            IP=$(echo "$STATUS" | jq -r '.status.loadBalancer.ingress[0].ip // empty')
+
+            if [ -n "$HOSTNAME" ]; then
+              echo "ALB ready (hostname): $HOSTNAME"
+              echo "ALB_DNS_NAME=$HOSTNAME" >> $GITHUB_ENV
               exit 0
             fi
 
-            echo "waiting ALB..."
-            sleep 10
+            if [ -n "$IP" ]; then
+              echo "ALB ready (ip): $IP"
+              echo "ALB_DNS_NAME=$IP" >> $GITHUB_ENV
+              exit 0
+            fi
+
+            echo "[$i/40] ALB not ready yet... waiting"
+            sleep 15
           done
 
-          echo "FAILED"
-          kubectl get ingress -n incident-system -o wide
+          echo " ALB not ready after timeout"
           exit 1
 
-      - name: Render Deployment from Template
-        run: |
-          export AWS_REGION="${{ vars.AWS_REGION }}"
-          export IMAGE_TAG="${IMAGE_TAG:0:7}"
-          export ECR_REPO_URI="$repo_url"
+            - name: Render Deployment from Template
+              run: |
+                export AWS_REGION="${{ vars.AWS_REGION }}"
+                export IMAGE_TAG="${IMAGE_TAG:0:7}"
+                export ECR_REPO_URI="$repo_url"
 
-          envsubst < k8s/deployment.yaml.tpl > k8s/deployment.yaml
+                envsubst < k8s/deployment.yaml.tpl > k8s/deployment.yaml
 
-          echo "========= Rendered Deployment ========="
-          cat k8s/deployment.yaml
+                echo "========= Rendered Deployment ========="
+                cat k8s/deployment.yaml
 
-      - name: Apply Deployment
-        run: |
-          kubectl apply -f k8s/deployment.yaml
-          kubectl rollout status deployment incident-api -n incident-system --timeout=300s
+            - name: Apply Deployment
+              run: |
+                kubectl apply -f k8s/deployment.yaml
+                kubectl rollout status deployment incident-api -n incident-system --timeout=300s
 
       # =========================
       # BUILD + DEPLOY FRONTEND
