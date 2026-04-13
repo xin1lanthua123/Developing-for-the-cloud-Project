@@ -107,12 +107,8 @@ jobs:
       - name: Terraform Apply
         working-directory: infra
         if: github.event.inputs.action != 'destroy'
-        run: terraform apply -auto-approve \
-              -target=module.cognito \
-              -target=module.dynamodb \
-              -target=module.ssm \
-              -target=module.eks_core \
-              -target=module.eks_irsa
+        run: |
+          terraform apply -auto-approve -target=module.cognito -target=module.dynamodb -target=module.ssm -target=module.eks_core -target=module.eks_irsa
         env:
           TF_VAR_project_name: cloud-incident-system
           TF_VAR_aws_region: ${{ vars.AWS_REGION }}
@@ -285,9 +281,7 @@ jobs:
       # BUILD + DEPLOY FRONTEND
       # =========================
       - name: apply terraform frontend hosting
-        run: terraform apply -auto-approve \
-          -target=module.frontend_hosting
-          -target=module.s3_upload 
+        run: terraform apply -auto-approve -target=module.frontend_hosting -target=module.s3_upload 
         env:
           TF_VAR_project_name: cloud-incident-system
           TF_VAR_frontend_bucket_prefix: cloud-incident-frontend
