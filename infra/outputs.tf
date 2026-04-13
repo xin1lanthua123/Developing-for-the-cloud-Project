@@ -26,7 +26,7 @@ output "upload_bucket_arn" {
 }
 
 output "frontend_bucket" {
-  value = module.frontend_hosting.bucket_name
+  value = module.frontend_hosting.frontend_bucket
 }
 
 output "frontend_url" {
