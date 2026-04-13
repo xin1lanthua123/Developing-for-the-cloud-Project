@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: incident-api
+  namespace: incident-system
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: incident-api
+  template:
+    metadata:
+      labels:
+        app: incident-api
+    spec:
+      serviceAccountName: backend-incident-sa
+      containers:
+        - name: incident-api
+          image: 816069145490.dkr.ecr.us-east-1.amazonaws.com/cloud-incident-api:v2
+          ports:
+            - containerPort: 8000
+          resources:
+            limits:
+              cpu: "500m"         # tối đa 0.5 CPU
+              memory: "512Mi"     # tối đa 512Mi RAM
+            requests:
+              cpu: "250m"         # đảm bảo ít nhất 0.25 CPU
+              memory: "256Mi"
+          env:
+            - name: DDB_TABLE_NAME
+              value: cloud-incident-table
+            - name: UPLOAD_BUCKET_NAME
+              value: cloud-incident-upload-5c7d6d61
+            - name: AWS_REGION
+              value: "us-east-1"
+            - name: AWS_DEFAULT_REGION
+              value: "us-east-1"
+            - name: COGNITO_REGION
+              value: "us-east-1"
+            - name: COGNITO_USER_POOL_ID
+              value: "us-east-1_7JOgrn71w"
+            - name: COGNITO_CLIENT_ID
+              value: "1v3k90pjfakkr3ds6c0c0dku7u"
+            - name: JIRA_BASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: jira-secret
+                  key: JIRA_BASE_URL
+            - name: JIRA_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: jira-secret
+                  key: JIRA_EMAIL
+            - name: JIRA_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: jira-secret
+                  key: JIRA_TOKEN
+            - name: JIRA_PROJECT_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: jira-secret
+                  key: JIRA_PROJECT_KEY
+            

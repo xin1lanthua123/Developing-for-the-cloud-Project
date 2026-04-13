@@ -1,0 +1,252 @@
+name: Full Production Deploy (Terraform + EKS + Frontend)
+
+on:
+  workflow_dispatch:
+    
+
+env:
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  deploy_all:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      # =========================
+      # AWS LOGIN
+      # =========================
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ vars.AWS_REGION }}
+
+      # =========================
+      # TERRAFORM APPLY
+      # =========================
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        working-directory: infra
+        run: terraform init
+      - name: Terraform Plan
+        working-directory: infra
+        run: terraform plan -out=tfplan
+      - name: Terraform Apply
+        working-directory: infra
+        run: terraform apply -auto-approve tfplan
+        env:
+          TF_VAR_project_name: cloud-incident-system
+          TF_VAR_aws_region: ${{ vars.AWS_REGION }}
+
+          TF_VAR_dynamodb_table_name: cloud-incident-table
+
+          TF_VAR_upload_bucket_prefix: cloud-incident-upload
+          TF_VAR_frontend_bucket_prefix: cloud-incident-frontend
+
+          TF_VAR_jira_base_url: https://ldlq2005.atlassian.net
+          TF_VAR_jira_email: ${{ secrets.JIRA_EMAIL}}
+          TF_VAR_jira_token: ${{ secrets.JIRA_API_TOKEN }}
+          TF_VAR_jira_project_key: QN
+
+      - name: Export Terraform Outputs
+        working-directory: infra
+        run: terraform output -json > tf_outputs.json
+
+      - name: Parse Terraform Outputs
+        id: tfout
+        working-directory: infra
+        run: |
+          echo "DDB_TABLE_NAME=$(jq -r '.dynamodb_table_name.value' tf_outputs.json)" >> $GITHUB_ENV
+          echo "UPLOAD_BUCKET_NAME=$(jq -r '.upload_bucket_name.value' tf_outputs.json)" >> $GITHUB_ENV
+          echo "COGNITO_USER_POOL_ID=$(jq -r '.cognito_user_pool_id.value' tf_outputs.json)" >> $GITHUB_ENV
+          echo "COGNITO_CLIENT_ID=$(jq -r '.cognito_client_id.value' tf_outputs.json)" >> $GITHUB_ENV
+          echo "FRONTEND_BUCKET=$(jq -r '.frontend_bucket.value' tf_outputs.json)" >> $GITHUB_ENV
+          echo "VPC_ID=$(jq -r '.vpc_id.value' tf_outputs.json)" >> $GITHUB_ENV
+          echo "JIRA_SSM_PARAM=$(jq -r '.jira_ssm_params.value' tf_outputs.json)" >> $GITHUB_ENV
+          echo "CLOUDFRONT_DISTRIBUTION_ID=$(jq -r '.cloudfront_distribution_id.value' tf_outputs.json)" >> $GITHUB_ENV
+          echo "FRONTEND_URL=$(jq -r '.frontend_url.value' tf_outputs.json)" >> $GITHUB_ENV
+
+      # =========================
+      # BUILD BACKEND IMAGE
+      # =========================
+      - name: Create ECR repository if not exists
+        run: |
+            aws ecr describe-repositories --repository-names incident-api \
+            || aws ecr create-repository \
+                --repository-name incident-api \
+                --region ${{ vars.AWS_REGION }}
+      - name: Set ECR repo URI
+        run: |
+            ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+            REPO_URI="$ACCOUNT_ID.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com/incident-api"
+            echo "repo_url=$REPO_URI" >> $GITHUB_ENV
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build backend Docker image
+        run: |
+          docker build -t incident-api:${IMAGE_TAG:0:7} ./backend
+
+      - name: Tag + Push backend image
+        run: |
+          docker tag incident-api:${IMAGE_TAG:0:7} $repo_url:${IMAGE_TAG:0:7}
+          docker push $repo_url:${IMAGE_TAG:0:7}
+    
+
+      # =========================
+      # UPDATE KUBECONFIG
+      # =========================
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig \
+            --region ${{ vars.AWS_REGION }} \
+            --name ${{ secrets.EKS_CLUSTER_NAME }}
+      # =========================
+      # APPLY K8S MANIFESTS
+      # =========================
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Apply Namespace + SA + Service 
+        run: |
+          kubectl apply -f k8s/namespace.yaml
+          kubectl apply -f k8s/backend-SA.yaml
+          kubectl apply -f k8s/alb-sa.yaml
+
+          kubectl delete secret jira-secret -n incident-system --ignore-not-found
+
+          kubectl create secret generic jira-secret \
+          -n incident-system \
+          --from-literal=JIRA_BASE_URL=https://ldlq2005.atlassian.net \
+          --from-literal=JIRA_EMAIL=ldlq2005@gmail.com \
+          --from-literal=JIRA_TOKEN=${{ secrets.JIRA_API_TOKEN }} \
+          --from-literal=JIRA_PROJECT_KEY=QN
+
+          kubectl apply -f k8s/service.yaml
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+
+      - name: Install AWS Load Balancer
+        run: |
+            
+            helm repo add eks https://aws.github.io/eks-charts
+
+            helm repo update
+
+            helm upgrade --install aws-load-balancer-controller eks/aws-load-balancer-controller \
+            --namespace kube-system \
+            --set clusterName="${{ secrets.EKS_CLUSTER_NAME }}" \
+            --set region="${{ vars.AWS_REGION }}" \
+            --set serviceAccount.create=false \
+            --set serviceAccount.name=aws-load-balancer-controller \
+            --set vpcId="$VPC_ID" \
+            --wait
+            
+      - name: Apply Ingress
+        run: |
+            kubectl apply -f k8s/ingress.yaml
+
+      - name: Get ALB DNS name from ingress
+        run: |
+          for i in {1..30}; do
+            ALB_DNS_NAME=$(kubectl get ingress -n incident-system \
+              -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+
+            if [ -n "$ALB_DNS_NAME" ]; then
+              echo "ALB_DNS_NAME=$ALB_DNS_NAME" >> $GITHUB_ENV
+              echo "ALB ready: $ALB_DNS_NAME"
+              exit 0
+            fi
+
+            echo "waiting ..."
+            sleep 10  
+          done
+
+          echo "ALB not ready in time"
+          exit 1
+
+      - name: Render Deployment from Template
+        run: |
+          export AWS_REGION="${{ vars.AWS_REGION }}"
+          export IMAGE_TAG="${IMAGE_TAG:0:7}"
+          export ECR_REPO_URI="$repo_url"
+
+          envsubst < k8s/deployment.yaml.tpl > k8s/deployment.yaml
+
+          echo "========= Rendered Deployment ========="
+          cat k8s/deployment.yaml
+
+      - name: Apply Deployment
+        run: |
+          kubectl apply -f k8s/deployment.yaml
+          kubectl rollout status deployment incident-api -n incident-system --timeout=300s
+
+      # =========================
+      # BUILD + DEPLOY FRONTEND
+      # =========================
+      - name: Generate frontend .env
+        working-directory: frontend
+        run: |
+          rm -f .env
+          cat > .env <<EOF 
+          VITE_API_URL=$FRONTEND_URL
+          VITE_COGNITO_USER_POOL_ID=$COGNITO_USER_POOL_ID
+          VITE_COGNITO_CLIENT_ID=$COGNITO_CLIENT_ID
+          VITE_AWS_REGION=${{ vars.AWS_REGION }}
+          VITE_UPLOAD_BUCKET_NAME=$UPLOAD_BUCKET_NAME
+          EOF
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend deps
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Deploy frontend to S3
+        working-directory: frontend
+        run: |
+          # Upload everything
+          aws s3 sync dist s3://${FRONTEND_BUCKET} --delete
+
+          # grant long cache duration for  static assets 
+          aws s3 sync dist s3://${FRONTEND_BUCKET} \
+            --exclude "index.html" \
+            --cache-control "max-age=31536000,public,immutable"
+
+          # index.html luôn fresh
+          aws s3 cp dist/index.html s3://${FRONTEND_BUCKET}/index.html \
+           --cache-control "no-cache"
+
+      - name: Invalidate CloudFront
+        run: |
+          echo "Invalidating Cloudfront cache ...."
+          aws cloudfront create-invalidation \
+            --distribution-id ${CLOUDFRONT_DISTRIBUTION_ID} \
+            --paths "/*"
+
+      # =========================
+      # PRINT BACKEND and FRONTEND URL
+      # =========================
+      - name: Print Backend ALB and Frontend URL
+        run: |
+          echo "Backend ALB URL:"
+          echo "http://${ALB_DNS_NAME}"
+          echo "Frontend URL:"
+          echo "${FRONTEND_URL}"

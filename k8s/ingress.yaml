@@ -1,0 +1,32 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: incident-backend-ingress
+  namespace: incident-system
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+    
+    alb.ingress.kubernetes.io/cors-allow-origin: "*"
+    alb.ingress.kubernetes.io/cors-allow-methods: "GET,POST,PATCH,OPTIONS"
+    alb.ingress.kubernetes.io/cors-allow-headers: "Authorization,Content-Type"
+    alb.ingress.kubernetes.io/cors-expose-headers: "*"
+    alb.ingress.kubernetes.io/backend-protocol: HTTP
+    alb.ingress.kubernetes.io/target-group-port: "8000"
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+    alb.ingress.kubernetes.io/success-codes: "200"
+
+spec:
+  ingressClassName: alb
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: incident-backend-svc
+                port:
+                  number: 80
