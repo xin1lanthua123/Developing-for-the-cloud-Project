@@ -44,7 +44,7 @@ jobs:
         run: terraform init
       - name: Terraform Plan
         working-directory: infra
-        run: terraform plan -input=false -out=tfplan
+        run: terraform plan 
         env:
           TF_VAR_project_name: cloud-incident-system
           TF_VAR_aws_region: ${{ vars.AWS_REGION }}
@@ -62,7 +62,7 @@ jobs:
       - name: Terraform Destroy
         working-directory: infra
         if: github.event.inputs.action == 'destroy'
-        run: terraform destroy -input=false -auto-approve
+        run: terraform destroy  -auto-approve
         env:
           TF_VAR_project_name: cloud-incident-system
           TF_VAR_aws_region: ${{ vars.AWS_REGION }}
@@ -79,7 +79,7 @@ jobs:
 
       - name: Terraform Apply
         working-directory: infra
-        run: terraform apply -input=false -auto-approve tfplan
+        run: terraform apply -auto-approve 
         env:
           TF_VAR_project_name: cloud-incident-system
           TF_VAR_aws_region: ${{ vars.AWS_REGION }}
