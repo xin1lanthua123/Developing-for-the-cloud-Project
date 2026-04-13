@@ -15,7 +15,7 @@ from models import Incident, VALID_STATUSES
 
 
 UPLOAD_BUCKET_NAME = os.getenv("UPLOAD_BUCKET_NAME")
-
+FRONTEND_URL = os.getenv("ORIGIN")
 COGNITO_USER_POOL_ID = os.getenv("COGNITO_USER_POOL_ID")
 COGNITO_REGION = os.getenv("COGNITO_REGION", "us-east-1")
 
@@ -24,7 +24,8 @@ COGNITO_REGION = os.getenv("COGNITO_REGION", "us-east-1")
 COGNITO_ISSUER = os.getenv("COGNITO_ISSUER")
 
 app = FastAPI()
-origins = ["*"]
+
+origins = [FRONTEND_URL]
 # CORS (cho frontend gọi API)
 app.add_middleware(
     CORSMiddleware,

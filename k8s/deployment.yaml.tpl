@@ -27,6 +27,8 @@ spec:
               cpu: "250m"
               memory: "256Mi"
           env:
+            - name: FRONTEND_URL
+              value: ${FRONTEND_URL}
             - name: DDB_TABLE_NAME
               value: ${DDB_TABLE_NAME}
 
