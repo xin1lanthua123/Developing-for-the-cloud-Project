@@ -73,7 +73,7 @@ jobs:
         env:
           TF_VAR_project_name: cloud-incident-system
           TF_VAR_aws_region: ${{ vars.AWS_REGION }}
-
+          TF_VAR_backend_alb_dns: alb_dns
           TF_VAR_dynamodb_table_name: cloud-incident-table
 
           TF_VAR_upload_bucket_prefix: cloud-incident-upload
