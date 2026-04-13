@@ -1,0 +1,30 @@
+name: Terraform Destroy
+
+on:
+  workflow_dispatch:   # chỉ chạy khi bấm tay
+
+jobs:
+  destroy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        working-directory: infra
+        run: terraform init
+
+      - name: Terraform Destroy
+        working-directory: infra
+        run: terraform destroy -input=false -auto-approve
+        env:
+          TF_VAR_project_name: cloud-incident-system
+          TF_VAR_aws_region: ${{ vars.AWS_REGION }}
+          TF_VAR_jira_base_url: https://ldlq2005.atlassian.net
+          TF_VAR_jira_email: ${{ secrets.JIRA_EMAIL }}
+          TF_VAR_jira_token: ${{ secrets.JIRA_API_TOKEN }}
+          TF_VAR_jira_project_key: QN
