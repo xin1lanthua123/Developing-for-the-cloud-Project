@@ -281,6 +281,7 @@ jobs:
       # BUILD + DEPLOY FRONTEND
       # =========================
       - name: apply terraform frontend hosting
+        working-directory: infra
         run: terraform apply -auto-approve -target=module.frontend_hosting -target=module.s3_upload 
         env:
           TF_VAR_project_name: cloud-incident-system
