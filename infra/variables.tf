@@ -1,3 +1,6 @@
+variable "backend_alb_dns" {
+  type = string
+}
 variable "project_name" {
   type        = string
   description = "Project name used for naming AWS resources"

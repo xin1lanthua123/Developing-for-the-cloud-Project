@@ -36,6 +36,7 @@ module "frontend_hosting" {
   source       = "./modules/frontend_hosting"
   project_name = var.project_name
   bucket_name  = "${var.frontend_bucket_prefix}-${random_id.suffix.hex}"
+  backend_alb_dns = var.backend_alb_dns
 }
 
 ## SSM

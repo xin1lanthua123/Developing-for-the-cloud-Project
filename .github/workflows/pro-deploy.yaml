@@ -107,15 +107,19 @@ jobs:
       - name: Terraform Apply
         working-directory: infra
         if: github.event.inputs.action != 'destroy'
-        run: terraform apply -auto-approve 
+        run: terraform apply -auto-approve \
+              -target=module.cognito \
+              -target=module.dynamodb \
+              -target=module.ssm \
+              -target=module.eks_core \
+              -target=module.eks_irsa
         env:
           TF_VAR_project_name: cloud-incident-system
           TF_VAR_aws_region: ${{ vars.AWS_REGION }}
 
           TF_VAR_dynamodb_table_name: cloud-incident-table
 
-          TF_VAR_upload_bucket_prefix: cloud-incident-upload
-          TF_VAR_frontend_bucket_prefix: cloud-incident-frontend
+       
 
           TF_VAR_jira_base_url: https://ldlq2005.atlassian.net
           TF_VAR_jira_email: ${{ secrets.JIRA_EMAIL}}
@@ -280,12 +284,25 @@ jobs:
       # =========================
       # BUILD + DEPLOY FRONTEND
       # =========================
+      - name: apply terraform frontend hosting
+        run: terraform apply -auto-approve \
+          -target=module.frontend_hosting
+          -target=module.s3_upload 
+        env:
+          TF_VAR_project_name: cloud-incident-system
+          TF_VAR_frontend_bucket_prefix: cloud-incident-frontend
+          TF_VAR_backend_dns_name: http://${ALB_DNS_NAME}
+           
+          TF_VAR_upload_bucket_prefix: cloud-incident-upload
+
+
+
       - name: Generate frontend .env
         working-directory: frontend
         run: |
           rm -f .env
           cat > .env <<EOF 
-          VITE_API_URL=http://${ALB_DNS_NAME}
+          VITE_API_URL=/api
           VITE_COGNITO_USER_POOL_ID=$COGNITO_USER_POOL_ID
           VITE_COGNITO_CLIENT_ID=$COGNITO_CLIENT_ID
           VITE_AWS_REGION=${{ vars.AWS_REGION }}

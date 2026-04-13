@@ -5,3 +5,6 @@ variable "project_name" {
 variable "bucket_name" {
   type = string
 }
+variable "backend_alb_dns" {
+  type = string
+}
