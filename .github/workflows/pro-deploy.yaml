@@ -225,23 +225,26 @@ jobs:
         run: |
             kubectl apply -f k8s/ingress.yaml
 
-      - name: Get ALB DNS name from ingress
+      - name: Wait for ALB
         run: |
-          for i in {1..30}; do
-            ALB_DNS_NAME=$(kubectl get ingress -n incident-system \
-              -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+          for i in {1..60}; do
 
-            if [ -n "$ALB_DNS_NAME" ]; then
-              echo "ALB_DNS_NAME=$ALB_DNS_NAME" >> $GITHUB_ENV
-              echo "ALB ready: $ALB_DNS_NAME"
+            ALB_DNS=$(kubectl get ingress incident-backend-ingress \
+              -n incident-system \
+              -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null)
+
+            if [[ "$ALB_DNS" != "" ]]; then
+              echo "ALB_DNS_NAME=$ALB_DNS" >> $GITHUB_ENV
+              echo "READY: $ALB_DNS"
               exit 0
             fi
 
-            echo "waiting ..."
-            sleep 10  
+            echo "waiting ALB..."
+            sleep 10
           done
 
-          echo "ALB not ready in time"
+          echo "FAILED"
+          kubectl get ingress -n incident-system -o wide
           exit 1
 
       - name: Render Deployment from Template
