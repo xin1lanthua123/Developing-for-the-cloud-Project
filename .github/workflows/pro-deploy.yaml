@@ -297,7 +297,7 @@ jobs:
           TF_VAR_jira_project_key: QN
           TF_VAR_project_name: cloud-incident-system
         
-          TF_VAR_backend_dns_name: http://${ALB_DNS_NAME}
+          TF_VAR_backend_alb_dns: http://${ALB_DNS_NAME}
        
 
 
