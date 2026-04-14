@@ -73,7 +73,13 @@ resource "aws_cloudfront_distribution" "cdn" {
   viewer_protocol_policy = "redirect-to-https"
 
   allowed_methods = [
-    "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"
+    "GET",
+    "HEAD",
+    "OPTIONS",
+    "PUT",
+    "POST",
+    "PATCH",
+    "DELETE"
   ]
 
   cached_methods = ["GET", "HEAD"]
