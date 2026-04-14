@@ -1,6 +1,6 @@
 variable "backend_alb_dns" {
   type = string
-  default = ""
+  default = "ahihi"
 }
 variable "project_name" {
   type        = string
