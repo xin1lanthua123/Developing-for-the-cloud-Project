@@ -78,6 +78,12 @@ jobs:
       # =========================
       # DESTROY (OPTION)
       # =========================
+      - name: Delete versioned S3 buckets (pre-destroy cleanup)
+        if: github.event.inputs.action == 'destroy'
+        shell: pwsh
+        run: |
+          ./deletebucket.ps1
+          
       - name: Terraform Destroy
         if: github.event.inputs.action == 'destroy'
         working-directory: infra
