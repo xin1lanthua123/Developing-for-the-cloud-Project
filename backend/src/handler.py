@@ -78,7 +78,7 @@ def health():
     return {"status": "ok"}
 
 
-@app.post("/incidents")
+@app.post("/api/incidents")
 async def create_incident(request: Request):
     user_id = get_current_user_id(request)
 
@@ -119,7 +119,7 @@ async def create_incident(request: Request):
         }
 
 
-@app.get("/incidents")
+@app.get("/api/incidents")
 def list_incidents(request: Request):
     user_id = get_current_user_id(request)
 
@@ -127,7 +127,7 @@ def list_incidents(request: Request):
     return {"incidents": items}
 
 
-@app.get("/incidents/{incident_id}")
+@app.get("/api/incidents/{incident_id}")
 def get_incident_detail(incident_id: str, request: Request):
     user_id = get_current_user_id(request)
 
@@ -141,7 +141,7 @@ def get_incident_detail(incident_id: str, request: Request):
     return {"incident": item}
 
 
-@app.patch("/incidents/{incident_id}")
+@app.patch("/api/incidents/{incident_id}")
 async def update_incident(incident_id: str, request: Request):
     user_id = get_current_user_id(request)
 
@@ -170,7 +170,7 @@ async def update_incident(incident_id: str, request: Request):
     return {"message": "incident updated", "incident": updated}
 
 
-@app.post("/incidents/{incident_id}/comments")
+@app.post("/api/incidents/{incident_id}/comments")
 async def add_comment(incident_id: str, request: Request):
     user_id = get_current_user_id(request)
 
@@ -205,7 +205,7 @@ async def add_comment(incident_id: str, request: Request):
     return {"message": "comment added", "incident": updated}
 
 
-@app.post("/incidents/{incident_id}/attachments/presign")
+@app.post("/api/incidents/{incident_id}/attachments/presign")
 async def presign_upload(incident_id: str, request: Request):
     user_id = get_current_user_id(request)
 
@@ -259,7 +259,7 @@ async def presign_upload(incident_id: str, request: Request):
     }
 
 
-@app.get("/incidents/{incident_id}/attachments/{attachment_id}/download")
+@app.get("/api/incidents/{incident_id}/attachments/{attachment_id}/download")
 def download_attachment(incident_id: str, attachment_id: str, request: Request):
     user_id = get_current_user_id(request)
 
