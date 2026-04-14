@@ -133,6 +133,12 @@ jobs:
           echo "VPC_ID=$(jq -r '.vpc_id.value' tf_outputs.json)" >> $GITHUB_ENV
           echo "CLOUDFRONT_DISTRIBUTION_ID=$(jq -r '.cloudfront_distribution_id.value' tf_outputs.json)" >> $GITHUB_ENV
           echo "FRONTEND_URL=$(jq -r '.frontend_url.value' tf_outputs.json)" >> $GITHUB_ENV
+          echo "DDB_TABLE_NAME=$(jq -r '.dynamodb_table_name.value' tf_outputs.json)" >> $GITHUB_ENV
+          echo "JIRA_BASE_URL=$(jq -r '.jira_ssm_params.value.base_url' tf_outputs.json)" >> $GITHUB_ENV
+          echo "JIRA_EMAIL=$(jq -r '.jira_ssm_params.value.email' tf_outputs.json)" >> $GITHUB_ENV
+          echo "JIRA_TOKEN=$(jq -r '.jira_ssm_params.value.token' tf_outputs.json)" >> $GITHUB_ENV
+          echo "JIRA_PROJECT_KEY=$(jq -r '.jira_ssm_params.value.project_key' tf_outputs.json)" >> $GITHUB_ENV
+  
 
       # =========================
       # BUILD BACKEND IMAGE
