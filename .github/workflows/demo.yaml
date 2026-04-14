@@ -78,13 +78,30 @@ jobs:
       # =========================
       # DESTROY (OPTION)
       # =========================
-      - name: Delete versioned S3 buckets (pre-destroy cleanup)
+      - name: Terraform Init (Bootstrap)
+        if: github.event.inputs.action == 'destroy'
+        working-directory: infra
+        run: terraform init -reconfigure
+
+      - name: Terraform Init (Bootstrap)
+        if: github.event.inputs.action == 'destroy'
+        working-directory: infra/bootstrap
+        run: terraform init -reconfigure
+
+      - name: Get TFSTATE bucket name (exclude from cleanup)
+        if: github.event.inputs.action == 'destroy'
+        working-directory: infra/bootstrap
+        run: |
+          echo "TFSTATE_BUCKET_NAME=cloud-incident-system-tf-state" >> $GITHUB_ENV
+
+      - name: Delete versioned S3 buckets (exclude tfstate bucket)
         if: github.event.inputs.action == 'destroy'
         working-directory: infra
         shell: pwsh
         run: |
+          echo "TFSTATE_BUCKET_NAME = $env:TFSTATE_BUCKET_NAME"
           ./deletebucket.ps1
-
+          
       - name: Terraform Destroy
         if: github.event.inputs.action == 'destroy'
         working-directory: infra
@@ -100,6 +117,11 @@ jobs:
           TF_VAR_jira_email: ${{ secrets.JIRA_EMAIL }}
           TF_VAR_jira_token: ${{ secrets.JIRA_API_TOKEN }}
           TF_VAR_jira_project_key: QN
+
+      - name: Terraform Destroy Bootstrap (Backend State)
+        if: github.event.inputs.action == 'destroy'
+        working-directory: infra/bootstrap
+        run: terraform destroy -auto-approve
 
       # =========================
       # PHASE 1: APPLY INFRA CORE
