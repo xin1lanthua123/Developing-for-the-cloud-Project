@@ -1,4 +1,4 @@
-name: Full Production Deploy (Terraform + EKS + Frontend)
+name: Full Production Deploy (Terraform + EKS + Frontend) - DEMO
 
 on:
   workflow_dispatch:
