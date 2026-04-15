@@ -78,6 +78,19 @@ jobs:
       # =========================
       # DESTROY (OPTION)
       # =========================
+      - name: Update kubeconfig
+        if: github.event.inputs.action == 'destroy'
+        run: |
+          aws eks update-kubeconfig \
+            --region ${{ env.AWS_REGION }} \
+            --name ${{ secrets.EKS_CLUSTER_NAME }}
+            
+      - name: Delete Igress 
+        if: github.event.inputs.action == 'destroy'
+        working-directory: k8s
+        run: |
+          kubectl delete -f k8s/ingress.yaml
+
       - name: Terraform Init (Bootstrap)
         if: github.event.inputs.action == 'destroy'
         working-directory: infra
@@ -99,7 +112,7 @@ jobs:
         working-directory: infra
         shell: pwsh
         run: |
-          echo "TFSTATE_BUCKET_NAME = $env:TFSTATE_BUCKET_NAME"
+          echo "TFSTATE_BUCKET_NAME = ${TFSTATE_BUCKET_NAME}"
           ./deletebucket.ps1
           
       - name: Terraform Destroy

@@ -81,23 +81,3 @@ module "eks_irsa" {
 
 
 
-# # ---------------------------
-# # LAMBDA_API GATEWAY MODULE
-# # ---------------------------
-# module "lambda_api" {
-#   source       = "./modules/lambda_api"
-#   project_name = var.project_name
-#   lambda_zip_path      = var.lambda_zip_path
-#   dynamodb_table_name  = module.dynamodb.table_name
-#   dynamodb_table_arn   = module.dynamodb.table_arn
-#   upload_bucket_name   = module.s3_upload.s3_bucket_id
-#   upload_bucket_arn    = module.s3_upload.s3_bucket_arn
-
-#   cognito_client_id    = module.cognito.user_pool_client_id
-#   cognito_issuer_url   = module.cognito.issuer_url
-#   jira_base_url      = module.ssm.jira_base_url_param
-#   jira_email         = module.ssm.jira_email_param
-#   jira_token         = module.ssm.jira_token_param
-#   jira_project_key   = module.ssm.jira_project_key_param
-#   frontend_domain = module.frontend_hosting.cloudfront_domain
-# }
