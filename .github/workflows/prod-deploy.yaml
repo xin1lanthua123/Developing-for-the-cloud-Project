@@ -84,7 +84,7 @@ jobs:
           aws eks update-kubeconfig \
             --region ${{ env.AWS_REGION }} \
             --name ${{ secrets.EKS_CLUSTER_NAME }}
-            
+
       - name: Delete Igress 
         if: github.event.inputs.action == 'destroy'
         working-directory: k8s
@@ -126,10 +126,10 @@ jobs:
           TF_VAR_upload_bucket_prefix: ${{ env.UPLOAD_BUCKET_PREFIX }}
           TF_VAR_frontend_bucket_prefix: ${{ env.FRONTEND_BUCKET_PREFIX }}
 
-          TF_VAR_jira_base_url: https://ldlq2005.atlassian.net
+          TF_VAR_jira_base_url: ${{ vars.JIRA_BASE_URL}}
           TF_VAR_jira_email: ${{ secrets.JIRA_EMAIL }}
           TF_VAR_jira_token: ${{ secrets.JIRA_API_TOKEN }}
-          TF_VAR_jira_project_key: QN
+          TF_VAR_jira_project_key: ${{ vars.PROJECT_KEY }}
 
       - name: Terraform Destroy Bootstrap (Backend State)
         if: github.event.inputs.action == 'destroy'
@@ -154,10 +154,11 @@ jobs:
           # Backend ALB DNS chưa có, để empty hoặc dummy
           TF_VAR_backend_alb_dns: "example.com"
 
-          TF_VAR_jira_base_url: https://ldlq2005.atlassian.net
+          
+          TF_VAR_jira_base_url: ${{ vars.jira_base_url}} 
           TF_VAR_jira_email: ${{ secrets.JIRA_EMAIL }}
           TF_VAR_jira_token: ${{ secrets.JIRA_API_TOKEN }}
-          TF_VAR_jira_project_key: QN
+          TF_VAR_jira_project_key: ${{ vars.project_key }}
 
       - name: Export Terraform Outputs
         if: github.event.inputs.action != 'destroy'
@@ -338,10 +339,11 @@ jobs:
           # QUAN TRỌNG: chỉ hostname, không có http://
           TF_VAR_backend_alb_dns: ${{ env.ALB_DNS_NAME }}
 
-          TF_VAR_jira_base_url: https://ldlq2005.atlassian.net
+          
+          TF_VAR_jira_base_url: ${{ vars.jira_base_url}} 
           TF_VAR_jira_email: ${{ secrets.JIRA_EMAIL }}
           TF_VAR_jira_token: ${{ secrets.JIRA_API_TOKEN }}
-          TF_VAR_jira_project_key: QN
+          TF_VAR_jira_project_key: ${{ vars.project_key }}
 
       # =========================
       # EXPORT OUTPUT AGAIN (AFTER UPDATE CLOUDFRONT)
