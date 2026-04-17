@@ -5,20 +5,22 @@ Part 1:https://drive.google.com/file/d/125pcqGB_zy8gtUTXR3keqw4hMQ9tUa7_/view?us
 Part 2:https://drive.google.com/file/d/1f1CQqUneEuoxlxX4eZemjfkoJyGUiM9L/view?usp=sharing
 
 
+# Tech Stack intergrated : 
+    IAM + EKS + SSM(AWS System Manager Parameter Store) + S3 + CloudFront + DynamoDB + Jira + Terraform + CICD pipeline (GITHUB Action)
+
 # Developing-for-the-cloud-Project
-Go to CICD pipeline action 
+    Go to CICD pipeline action 
 
-Choose run workflow, after click inside there 3 options of workflow execution : apply, destroy, bootstap
+    Choose “Run Workflow.” After entering the workflow, there are three execution options: Apply, Destroy, and Bootstrap.
 
-Choose option bootstrap first to execute bootstrap configuration on pipeline for connecting remote state 
+    Choose option bootstrap first to execute bootstrap configuration on pipeline for connecting remote state 
+    from your local project to the AWS to store the tfstate insine the s3 
 
-from your local project to the AWS to store the tfstate insine the s3 
+    Then choose option apply to apply everything about project execution
 
-Then choose option apply to apply everything about project execution
-
-Finally, choose destroy to clean up the infrastructure in AWS along with bootstrap
- 
-Sometimes VPC can not delete due to ENI issue so go to the AWS console to manual delete it 
+    Finally, choose destroy to clean up the infrastructure in AWS along with bootstrap
+    
+    Sometimes VPC can not delete due to ENI issue so go to the AWS console to manual delete it 
 
 
 
