@@ -455,6 +455,3 @@ jobs:
           
           echo "Frontend URL:"
           echo "${FRONTEND_URL}"
-
-          echo "Frontend URL:"
-          echo "${FRONTEND_URL}"
