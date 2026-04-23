@@ -231,7 +231,7 @@ jobs:
             
       - name: Set ECR repo URI
         run: |
-          REPO_URI="${{ secrets.DOCKERHUB_USERNAME }}/incident-api"
+          REPO_URI="${{ secrets.DOCKER_USERNAME }}/incident-api"
           echo "repo_url=$REPO_URI" >> $GITHUB_ENV
           
       - name: Build backend Docker image
