@@ -1,0 +1,155 @@
+name: Full Production Deploy (Terraform + EKS + Frontend)
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Terraform action"
+        required: true
+        default: "apply"
+        type: choice
+        options:
+          - apply
+          - destroy
+          - bootstrap
+
+env:
+  IMAGE_TAG: ${{ github.sha }}
+  PROJECT_NAME: cloud-incident-system
+  AWS_REGION: ${{ vars.AWS_REGION }}
+
+jobs:
+
+  # =========================
+  # 1. BOOTSTRAP
+  # =========================
+  bootstrap:
+    if: github.event.inputs.action == 'bootstrap'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terraform Bootstrap
+        working-directory: infra/bootstrap
+        run: |
+          terraform init
+          terraform apply -auto-approve
+
+  # =========================
+  # 2. DESTROY
+  # =========================
+  destroy:
+    if: github.event.inputs.action == 'destroy'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ env.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        working-directory: infra
+        run: terraform init -reconfigure
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig \
+            --region ${{ env.AWS_REGION }} \
+            --name ${{ secrets.EKS_CLUSTER_NAME }}
+
+      - name: Delete ingress
+        run: kubectl delete -f k8s/ingress.yaml || true
+
+      - name: Destroy Infra
+        working-directory: infra
+        run: terraform destroy -auto-approve
+
+      - name: Destroy Bootstrap
+        working-directory: infra/bootstrap
+        run: terraform destroy -auto-approve
+
+  # =========================
+  # 3. DEPLOY (APPLY)
+  # =========================
+  deploy:
+    if: github.event.inputs.action == 'apply'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+      
+      - name: Build Docker image
+        run: |
+          docker build -t quanldl/incident-api:${IMAGE_TAG:0:7} ./backend
+      
+      - name: Push Docker image
+        run: |
+          docker push quanldl/incident-api:${IMAGE_TAG:0:7}
+      
+      - name: Export image name
+        run: |
+          echo "IMAGE_URI=quanldl/incident-api:${IMAGE_TAG:0:7}" >> $GITHUB_ENV
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ env.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        working-directory: infra
+        run: terraform init -reconfigure
+
+      - name: Apply Infra Core
+        working-directory: infra
+        run: terraform apply -auto-approve
+
+      
+      # ===== K8S =====
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig \
+            --region ${{ env.AWS_REGION }} \
+            --name ${{ secrets.EKS_CLUSTER_NAME }}
+
+      - uses: azure/setup-kubectl@v4
+
+      - name: Apply K8S
+        run: kubectl apply -f k8s/
+
+      # ===== FRONTEND =====
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Deploy S3
+        working-directory: frontend
+        run: aws s3 sync dist s3://your-bucket --delete
