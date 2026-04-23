@@ -96,7 +96,7 @@ jobs:
         if: github.event.inputs.action == 'destroy'
         working-directory: k8s
         run: |
-          kubectl delete -f k8s/ingress.yaml
+          kubectl delete -f ingress.yaml
 
       - name: Terraform Init (Bootstrap)
         if: github.event.inputs.action == 'destroy'
