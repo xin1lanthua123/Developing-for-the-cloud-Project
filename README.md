@@ -33,7 +33,7 @@ DOCKER REGISTRY SECRET:
 # $ {{ secrets.DOCKER_TOKEN }}
 # $ {{ secrets.DOCKER_USERNAME }}
 
-DOCKER_USERNAME
+
 
 use your own jira acccount to fulfill these vars and secrets:
 
