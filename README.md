@@ -29,6 +29,12 @@ Use your own IAM access key to access your AWS and region (or you can use us-eas
 
 # ${{ vars.AWS_REGION }}
 
+DOCKER REGISTRY SECRET:
+# $ {{ secrets.DOCKER_TOKEN }}
+# $ {{ secrets.DOCKER_USERNAME }}
+
+DOCKER_USERNAME
+
 use your own jira acccount to fulfill these vars and secrets:
 
 # ${{ vars.JIRA_BASE_URL}}
