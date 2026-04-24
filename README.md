@@ -1,5 +1,5 @@
-# Project explanation 
-
+# Project explanation video link
+https://drive.google.com/file/d/1nIo55DqH4vyDurr1q0SPI2ZTZxEkbHI1/view?usp=sharing
 
 # Tech Stack intergrated : 
     IAM + EKS + SSM(AWS System Manager Parameter Store) + S3 + CloudFront + DynamoDB + Jira + Terraform + CICD pipeline (GITHUB Action)
